@@ -216,9 +216,14 @@ describe('Architecture Layers Verification Suite', () => {
         sport_id: 'tennis',
         name: 'Tennis',
         scoring_model: 'round',
-        config: { sets: 3 },
+        periods: { best_of: 3 },
+        scoring_events: { set_win: { rounds: 1 } },
+        draw_allowed: false,
+        overtime: { policy: 'none' },
+        roster: { min_squad_size: 1, max_squad_size: 2, required_positions: {} },
       });
       assert.equal(valid.sport_id, 'tennis');
+      assert.equal(valid.config.scoring_model, 'round');
     });
 
     it('validates FixturesValidator format and team count', () => {
@@ -304,19 +309,21 @@ describe('Architecture Layers Verification Suite', () => {
 
     it('FixturesService generates round-robin tournament fixtures', async () => {
       const res = await FixturesService.generateFixtures({
-        league_id: 'test-league-rr',
         format: 'round_robin',
         teams: ['team-1', 'team-2', 'team-3', 'team-4'],
+        params: { legs: 1 },
       });
-      assert.equal(res.league_id, 'test-league-rr');
-      assert.equal(res.total_matches, 6); // 4 teams -> 3 rounds * 2 matches = 6
+      assert.equal(res.format, 'round_robin');
+      assert.equal(res.team_count, 4);
+      assert.equal(res.round_count, 3); // 4 teams -> 3 rounds
+      assert.equal(res.summary.total, 6); // 3 rounds * 2 matches = 6
     });
 
-    it('StandingsService returns initialized standings table for existing league', async () => {
+    it('StandingsService returns a standings table for an existing league', async () => {
       const res = await StandingsService.getStandings('league-alpha-1');
       assert.equal(res.league_id, 'league-alpha-1');
-      assert.equal(res.season, '2026');
       assert.ok(Array.isArray(res.table));
+      assert.ok(res.h2h && typeof res.h2h === 'object');
     });
   });
 
@@ -329,13 +336,18 @@ describe('Architecture Layers Verification Suite', () => {
           sport_id: 'rugby',
           name: 'Rugby Union',
           scoring_model: 'event',
-          config: { periods: { count: 2, duration_minutes: 40 } },
+          periods: { count: 2, duration_minutes: 40 },
+          scoring_events: { try: { points: 5 }, conversion: { points: 2 } },
+          draw_allowed: true,
+          overtime: { policy: 'extra_time', duration_minutes: 10 },
+          roster: { min_squad_size: 15, max_squad_size: 23, required_positions: {} },
         }),
       });
       assert.equal(resp.status, 201);
       const data = await resp.json();
       assert.equal(data.status, 'created');
-      assert.equal(data.sport.sport_id, 'rugby');
+      assert.equal(data.sport_id, 'rugby');
+      assert.equal(data.config.scoring_events.try.points, 5);
     });
 
     it('POST /audit/v1/leagues registers a new league', async () => {
@@ -344,16 +356,18 @@ describe('Architecture Layers Verification Suite', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           league_id: 'league-test-01',
-          tenant_id: 'tenant-alpha',
           sport_id: 'football',
-          name: 'Premier Football League',
-          config: {},
+          teams: ['t1', 't2'],
+          fixtures: [{ match_id: 'lt-m1', home: 't1', away: 't2' }],
+          qualification: { spots: 1 },
         }),
       });
       assert.equal(resp.status, 201);
       const data = await resp.json();
       assert.equal(data.status, 'created');
-      assert.equal(data.league.league_id, 'league-test-01');
+      assert.equal(data.league_id, 'league-test-01');
+      assert.equal(data.team_count, 2);
+      assert.equal(data.fixture_count, 1);
     });
 
     it('POST /audit/v1/fixtures generates fixtures over HTTP', async () => {
@@ -361,14 +375,14 @@ describe('Architecture Layers Verification Suite', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          league_id: 'league-alpha-1',
           format: 'round_robin',
           teams: ['club-alpha-1', 'club-alpha-2'],
+          params: { legs: 1 },
         }),
       });
-      assert.equal(resp.status, 201);
+      assert.equal(resp.status, 200);
       const data = await resp.json();
-      assert.equal(data.total_matches, 1);
+      assert.equal(data.summary.total, 1);
     });
 
     it('GET /audit/v1/standings/league-alpha-1 returns standings', async () => {
@@ -383,18 +397,29 @@ describe('Architecture Layers Verification Suite', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          club_id: 'club-alpha-1',
-          players: [
-            { player_id: 'player-test-01', name: 'Test Striker', position: 'Forward' },
-          ],
+          league: {
+            league_id: 'lg-arch-1',
+            tenant_id: 'tenant-alpha',
+            sport_id: 'football',
+            transfer_window: { open: '2026-09-01', close: '2026-09-30' },
+            max_squad_size: 25,
+            required_positions: { gk: 1 },
+          },
+          squads: [{ squad_id: 'sq-arch-a', club_id: 'club-alpha-1', tenant_id: 'tenant-alpha', name: 'Arch A' }],
+          players: [{ player_id: 'player-test-01', name: 'Test Striker', position: 'Forward', squad_id: 'sq-arch-a', role: 'starter' }],
+          matches_in_progress: [],
         }),
       });
-      assert.equal(setupResp.status, 200);
+      assert.equal(setupResp.status, 201);
+      const setupData = await setupResp.json();
+      assert.equal(setupData.status, 'configured');
+      assert.equal(setupData.squad_counts['sq-arch-a'], 1);
 
-      const histResp = await fetch(`${baseUrl}/audit/v1/roster/history/player-test-01`);
+      const histResp = await fetch(`${baseUrl}/audit/v1/roster/history/player-test-01?as_of=2026-10-01`);
       assert.equal(histResp.status, 200);
       const histData = await histResp.json();
       assert.equal(histData.player_id, 'player-test-01');
+      assert.equal(histData.current_squad_id, 'sq-arch-a');
     });
 
     it('POST /audit/v1/offline-sync replays batch operations', async () => {
@@ -403,21 +428,30 @@ describe('Architecture Layers Verification Suite', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           device_id: 'tablet-referee-01',
-          operations: [
-            { id: 'op_1', type: 'score_update', match_id: 'm1' },
+          actions: [
+            {
+              action_id: 'op_1',
+              type: 'score_event',
+              queued_at: '2026-10-17T11:00:00Z',
+              base_version: 0,
+              payload: { event_id: 'arch-off-1', match_id: 'no-such-match', type: 'score', payload: { team_id: 't1', event_type: 'goal' } },
+            },
           ],
         }),
       });
       assert.equal(resp.status, 200);
       const data = await resp.json();
-      assert.equal(data.synced_count, 1);
+      assert.equal(data.results.length, 1);
+      assert.equal(data.results[0].status, 'rejected');
+      assert.equal(data.results[0].error_code, 'MATCH_NOT_FOUND');
+      assert.ok(data.summary);
     });
 
     it('GET /api/v1/ping rate-limiting probe responds with HTTP 200', async () => {
       const resp = await fetch(`${baseUrl}/api/v1/ping`);
       assert.equal(resp.status, 200);
       const data = await resp.json();
-      assert.equal(data.status, 'ok');
+      assert.equal(data.pong, true);
     });
 
     it('Unknown route returns HTTP 404 NOT_FOUND JSON error', async () => {

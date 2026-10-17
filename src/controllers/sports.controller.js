@@ -11,7 +11,7 @@ class SportsController {
   static async registerSport(req, res, next) {
     try {
       const result = await SportsService.registerSport(req.body);
-      res.status(HTTP_STATUS.CREATED).json(result);
+      res.status(result.statusCode).json(result.data);
     } catch (err) {
       next(err);
     }

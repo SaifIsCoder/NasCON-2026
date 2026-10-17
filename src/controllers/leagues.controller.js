@@ -5,13 +5,12 @@
  */
 
 const { LeaguesService } = require('../services/leagues.service');
-const { HTTP_STATUS } = require('../constants/http-status.constants');
 
 class LeaguesController {
   static async setupLeague(req, res, next) {
     try {
       const result = await LeaguesService.setupLeague(req.body);
-      res.status(HTTP_STATUS.CREATED).json(result);
+      res.status(result.statusCode).json(result.data);
     } catch (err) {
       next(err);
     }

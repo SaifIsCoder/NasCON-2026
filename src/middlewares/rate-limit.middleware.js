@@ -7,6 +7,7 @@
  */
 
 const { APP_CONSTANTS } = require('../constants/app.constants');
+const { ERROR_CODES } = require('../constants/error-codes.constants');
 
 const requestCounts = new Map();
 
@@ -32,11 +33,14 @@ function rateLimiter(req, res, next) {
   }
 
   if (record.count > maxReqs) {
+    const retryAfterMs = Math.max(0, windowMs - (now - record.startTime));
+    const retryAfterSec = Math.max(1, Math.ceil(retryAfterMs / 1000));
+    res.set('Retry-After', String(retryAfterSec));
     return res.status(429).json({
       error: {
-        code: 'RATE_LIMIT_EXCEEDED',
+        code: ERROR_CODES.RATE_LIMITED,
         message: 'Too many requests. Please slow down.',
-        details: { retry_after_ms: windowMs - (now - record.startTime) },
+        details: { retry_after_ms: retryAfterMs },
       },
     });
   }

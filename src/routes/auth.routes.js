@@ -13,7 +13,7 @@ router.post(['/api/v1/auth/login', '/auth/login'], AuthController.login);
 
 // Rate-limiting test probe (Section 5.13)
 router.get('/api/v1/ping', (req, res) => {
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.status(200).json({ pong: true });
 });
 
 module.exports = router;

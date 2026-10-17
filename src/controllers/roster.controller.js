@@ -5,13 +5,12 @@
  */
 
 const { RosterService } = require('../services/roster.service');
-const { HTTP_STATUS } = require('../constants/http-status.constants');
 
 class RosterController {
   static async setup(req, res, next) {
     try {
       const result = await RosterService.setupRoster(req.body);
-      res.status(HTTP_STATUS.OK).json(result);
+      res.status(result.statusCode).json(result.data);
     } catch (err) {
       next(err);
     }
@@ -20,7 +19,7 @@ class RosterController {
   static async transfer(req, res, next) {
     try {
       const result = await RosterService.transferPlayer(req.body);
-      res.status(HTTP_STATUS.OK).json(result);
+      res.status(result.statusCode).json(result.data);
     } catch (err) {
       next(err);
     }
@@ -28,8 +27,8 @@ class RosterController {
 
   static async getHistory(req, res, next) {
     try {
-      const result = await RosterService.getPlayerHistory(req.params.player_id);
-      res.status(HTTP_STATUS.OK).json(result);
+      const result = await RosterService.getPlayerHistory(req.params.player_id, req.query.as_of);
+      res.status(200).json(result);
     } catch (err) {
       next(err);
     }

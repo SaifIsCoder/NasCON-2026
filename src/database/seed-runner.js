@@ -151,6 +151,16 @@ const DEMO_USERS = [
  * @param {import('pg').PoolClient} client
  */
 async function wipeTransientData(client) {
+  // Serialize concurrent reset operations via PostgreSQL transaction-scoped advisory lock
+  await client.query('SELECT pg_advisory_xact_lock(424242)');
+  // Section 5.11 / 5.14 scenario state (no inbound FKs; safe to clear first)
+  await client.query('DELETE FROM offline_sync_actions');
+  await client.query('DELETE FROM roster_audit');
+  await client.query('DELETE FROM roster_transfer_requests');
+  await client.query('DELETE FROM roster_live_matches');
+  await client.query('DELETE FROM roster_registrations');
+  await client.query('DELETE FROM roster_squads');
+  await client.query('DELETE FROM roster_leagues');
   await client.query('DELETE FROM match_events');
   await client.query('DELETE FROM matches');
   await client.query('DELETE FROM orders');

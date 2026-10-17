@@ -5,10 +5,15 @@
  * Centralizes connection pooling, query execution, and schema migrations.
  */
 
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
 const fs = require('fs');
 const path = require('path');
 const { env } = require('./env');
+
+// Return DATE columns (OID 1082) as plain 'YYYY-MM-DD' strings instead of
+// local-midnight Date objects, so date-only comparisons and responses are
+// timezone-independent (inclusive transfer-window boundaries must be exact).
+types.setTypeParser(1082, (val) => val);
 
 const pool = new Pool({
   connectionString: env.DATABASE_URL,

@@ -149,8 +149,100 @@ CREATE TABLE IF NOT EXISTS orders (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- ============================================================
+-- Section 5.11 Roster, Transfers, Loans & History
+-- ============================================================
+
+-- Roster scenario league configuration
+CREATE TABLE IF NOT EXISTS roster_leagues (
+    league_id VARCHAR(64) PRIMARY KEY,
+    tenant_id VARCHAR(64) NOT NULL,
+    sport_id VARCHAR(64),
+    transfer_open DATE,
+    transfer_close DATE,
+    max_squad_size INT,
+    required_positions JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Roster squads within a scenario league
+CREATE TABLE IF NOT EXISTS roster_squads (
+    league_id VARCHAR(64) NOT NULL,
+    squad_id VARCHAR(64) NOT NULL,
+    club_id VARCHAR(64),
+    tenant_id VARCHAR(64) NOT NULL,
+    name VARCHAR(255),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (league_id, squad_id)
+);
+
+-- Current registration state of a player within a scenario league
+CREATE TABLE IF NOT EXISTS roster_registrations (
+    league_id VARCHAR(64) NOT NULL,
+    player_id VARCHAR(64) NOT NULL,
+    name VARCHAR(255),
+    position VARCHAR(64),
+    squad_id VARCHAR(64),
+    parent_squad_id VARCHAR(64),
+    role VARCHAR(32),
+    registration_type VARCHAR(32),
+    start_date DATE,
+    loan_end_date DATE,
+    on_loan BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (league_id, player_id)
+);
+
+-- Immutable roster audit trail (append-only)
+CREATE TABLE IF NOT EXISTS roster_audit (
+    id SERIAL PRIMARY KEY,
+    audit_id VARCHAR(64) NOT NULL,
+    league_id VARCHAR(64) NOT NULL,
+    player_id VARCHAR(64) NOT NULL,
+    action VARCHAR(32) NOT NULL,
+    from_squad_id VARCHAR(64),
+    to_squad_id VARCHAR(64),
+    effective_date DATE,
+    state VARCHAR(48),
+    who VARCHAR(128),
+    occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    why TEXT,
+    entry JSONB NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_roster_audit_player ON roster_audit(player_id);
+
+-- Roster transfer request idempotency store
+CREATE TABLE IF NOT EXISTS roster_transfer_requests (
+    request_id VARCHAR(64) PRIMARY KEY,
+    league_id VARCHAR(64),
+    request_body JSONB NOT NULL,
+    response JSONB NOT NULL,
+    status_code INT NOT NULL DEFAULT 201,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- In-progress matches for the transfer deferral edge case
+CREATE TABLE IF NOT EXISTS roster_live_matches (
+    league_id VARCHAR(64) NOT NULL,
+    match_id VARCHAR(64) NOT NULL,
+    home_squad_id VARCHAR(64),
+    away_squad_id VARCHAR(64),
+    PRIMARY KEY (league_id, match_id)
+);
+
+-- ============================================================
+-- Section 5.14 Offline Sync processed-action dedup
+-- ============================================================
+CREATE TABLE IF NOT EXISTS offline_sync_actions (
+    device_id VARCHAR(64) NOT NULL,
+    action_id VARCHAR(64) NOT NULL,
+    result JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (device_id, action_id)
+);
+
 -- Initial Baseline Data (Section 5.5, 8.3)
-INSERT INTO tenants (tenant_id, name) VALUES 
+INSERT INTO tenants (tenant_id, name) VALUES
 ('tenant-alpha', 'Alpha Sports'),
 ('tenant-beta', 'Beta Athletics')
 ON CONFLICT (tenant_id) DO NOTHING;

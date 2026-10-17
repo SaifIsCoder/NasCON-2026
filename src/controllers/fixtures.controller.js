@@ -11,7 +11,7 @@ class FixturesController {
   static async generateFixtures(req, res, next) {
     try {
       const result = await FixturesService.generateFixtures(req.body);
-      res.status(HTTP_STATUS.CREATED).json(result);
+      res.status(HTTP_STATUS.OK).json(result);
     } catch (err) {
       next(err);
     }
