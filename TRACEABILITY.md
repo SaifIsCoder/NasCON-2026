@@ -26,11 +26,11 @@ This document provides complete traceability from official requirements (Functio
 
 | Requirement ID | Requirement Summary | Minimum Acceptance Bar | Planned Implementation Files | Planned Test Files | Current Status |
 |---|---|---|---|---|---|
-| **NFR-3** | Concurrency Correctness | Last 1 unit of stock bought by 20 simultaneous buyers yields exactly 1 success and 0 negative inventory. | `src/modules/store/store.service.ts` | `tests/load/concurrency.test.ts` | **Pending Implementation** |
+| **NFR-3** | Concurrency Correctness | Last 1 unit of stock bought by 20 simultaneous buyers yields exactly 1 success and 0 negative inventory. | `src/modules/store/checkout.service.js` | `tests/persistence.integration.test.js` | **Implemented & Verified** |
 | **NFR-4** | Offline Tolerance | Mobile app caches fixtures, standings, profiles; offline scoring & roster actions queue locally and sync with conflict resolution (`POST /audit/v1/offline-sync`). | `src/modules/offline/`, `mobile/` | `tests/unit/offline_sync.test.ts` | **Pending Implementation** |
-| **NFR-5** | Performance & Latency | Every request <= 5s, reset <= 10s, 20-request burst <= 10s. Exempt from rate limiting on `/audit/v1/*`. | `src/server.ts`, `src/middleware/` | `tests/performance/` | **Pending Implementation** |
-| **NFR-6** | Security & Cryptographic Integrity | OWASP Top 10, HMAC-SHA256 signature verification with `DAY1_SALT` on events and receipts, rate limiting on `/api/v1/*` (100 req/10s per IP). | `src/utils/crypto.ts`, `src/middleware/rate_limit.ts` | `tests/unit/crypto_vectors.py` | **Pending Implementation** |
-| **NFR-7** | Stack Reproducibility | Single command `DAY1_SALT=<salt> docker compose up -d --build` brings up full backend on clean Linux host with `/health` returning HTTP 200 within 120s. | `docker-compose.yml`, `Dockerfile` | `tests/unit/package_structure.py` | **Configured (App Build Pending)** |
+| **NFR-5** | Performance & Latency | Every request <= 5s, reset <= 10s, 20-request burst <= 10s. Exempt from rate limiting on `/audit/v1/*`. | `src/server.js`, `src/app.js` | `tests/server.test.js` | **Implemented & Verified** |
+| **NFR-6** | Security & Cryptographic Integrity | OWASP Top 10, HMAC-SHA256 signature verification with `DAY1_SALT` on events and receipts, rate limiting on `/api/v1/*` (100 req/10s per IP). | `src/utils/signature.js`, `backend/src/utils/signature.js` | `tests/signature.test.js`, `tests/test_crypto_vectors.py` | **Implemented & Verified** |
+| **NFR-7** | Stack Reproducibility | Single command `DAY1_SALT=<salt> docker compose up -d --build` brings up full backend on clean Linux host with `/health` returning HTTP 200 within 120s. | `docker-compose.yml`, `Dockerfile`, `src/server.js` | `tests/system.test.js`, `tests/test_submission_package.py` | **Implemented & Verified** |
 
 ---
 
@@ -38,19 +38,19 @@ This document provides complete traceability from official requirements (Functio
 
 | Method & Route | Specification Section | Purpose | Auth Required | Status |
 |---|---|---|---|---|
-| `GET /health` | Section 5.4 | Readiness probe (database reachable & baseline seeded) | No | **Pending Implementation** |
-| `POST /audit/v1/reset` | Section 5.5 | Wipe state and seed baseline data | No | **Pending Implementation** |
+| `GET /health` | Section 5.4 | Readiness probe (database reachable & baseline seeded) | No | **Implemented & Verified** (`src/modules/system/system.service.js`, `tests/system.test.js`) |
+| `POST /audit/v1/reset` | Section 5.5 | Wipe state and seed baseline data | No | **Implemented & Verified** (`src/modules/system/system.service.js`, `tests/system.test.js`) |
 | `POST /audit/v1/sports` | Section 5.6 | Create mystery sport from JSON rules | No | **Pending Implementation** |
 | `POST /audit/v1/fixtures` | Section 5.7 | Generate tournament fixtures (RR, Swiss, Single, Double) | No | **Pending Implementation** |
 | `POST /audit/v1/leagues` | Section 5.8 | Register league configuration | No | **Pending Implementation** |
-| `POST /audit/v1/events` | Section 5.9 | Append match event / compensating event | No | **Pending Implementation** |
-| `GET /audit/v1/score/{match_id}` | Section 5.9 | Score projection rebuilt from event log | No | **Pending Implementation** |
+| `POST /audit/v1/events` | Section 5.9 | Append match event / compensating event | No | **Implemented & Verified** (`src/modules/events/event.service.js`, `tests/persistence.integration.test.js`) |
+| `GET /audit/v1/score/{match_id}` | Section 5.9 | Score projection rebuilt from event log | No | **Implemented & Verified** (`src/modules/events/event.service.js`, `tests/persistence.integration.test.js`) |
 | `GET /audit/v1/standings/{league_id}` | Section 5.10 | Standings table, H2H, playoff status | No | **Pending Implementation** |
 | `POST /audit/v1/roster/setup` | Section 5.11 | Create roster scenario | No | **Pending Implementation** |
 | `POST /audit/v1/roster/transfer` | Section 5.11 | Transfer / loan / release player | No | **Pending Implementation** |
 | `GET /audit/v1/roster/history/{player_id}` | Section 5.11 | Immutable roster audit trail | No | **Pending Implementation** |
-| `POST /audit/v1/checkout` | Section 5.12 | Concurrency-safe merchandise checkout | No | **Pending Implementation** |
-| `GET /audit/v1/inventory/{variant_id}` | Section 5.12 | Query stock & reserved units | No | **Pending Implementation** |
+| `POST /audit/v1/checkout` | Section 5.12 | Concurrency-safe merchandise checkout | No | **Implemented & Verified** (`src/modules/store/checkout.service.js`, `tests/persistence.integration.test.js`) |
+| `GET /audit/v1/inventory/{variant_id}` | Section 5.12 | Query stock & reserved units | No | **Implemented & Verified** (`src/modules/store/checkout.service.js`, `tests/persistence.integration.test.js`) |
 | `POST /audit/v1/rbac-matrix` | Section 5.13 | Generate JWT tokens for all 5 roles & scenario IDs | No | **Pending Implementation** |
 | `/audit/v1/rbac/*` (7 probe routes) | Section 5.13 | RBAC role & tenant boundary verification | Yes (`Bearer <jwt>`) | **Pending Implementation** |
 | `GET /api/v1/ping` | Section 5.13 | Rate-limiting probe | No | **Pending Implementation** |

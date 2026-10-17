@@ -40,6 +40,9 @@ async function migrate() {
   const schemaPath = path.join(__dirname, 'schema.sql');
   const schemaSql = fs.readFileSync(schemaPath, 'utf8');
   await pool.query(schemaSql);
+  await pool.query(
+    "INSERT INTO schema_migrations (version) VALUES ('20261017_baseline_schema') ON CONFLICT DO NOTHING"
+  );
 }
 
 /**

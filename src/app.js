@@ -8,6 +8,7 @@
 const express = require('express');
 const { appendEvent, getScore } = require('./modules/events/event.service');
 const { processCheckout, getInventory } = require('./modules/store/checkout.service');
+const { checkHealth, performReset } = require('./modules/system/system.service');
 
 const app = express();
 
@@ -38,9 +39,41 @@ app.use((err, req, res, next) => {
 });
 
 // Section 5.4: Readiness probe (no auth)
-// Returns 200 {"status":"ok"}
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok' });
+// Returns 200 {"status":"ok"} only when database is reachable and baseline data is seeded
+app.get('/health', async (req, res) => {
+  try {
+    const health = await checkHealth();
+    if (!health.healthy) {
+      return res.status(503).json({
+        status: 'error',
+        error: {
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Database is unreachable or baseline data is not seeded.',
+          details: {},
+        },
+      });
+    }
+    return res.status(200).json({ status: 'ok' });
+  } catch (err) {
+    return res.status(503).json({
+      status: 'error',
+      error: {
+        code: 'SERVICE_UNAVAILABLE',
+        message: 'Database is unreachable or baseline data is not seeded.',
+        details: {},
+      },
+    });
+  }
+});
+
+// Section 5.5: Audit Baseline Reset Endpoint
+app.post('/audit/v1/reset', async (req, res, next) => {
+  try {
+    const result = await performReset(req.body || {});
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
 });
 
 // Section 5.9: Match Event Sourcing Endpoints

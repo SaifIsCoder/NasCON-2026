@@ -7,6 +7,7 @@
 
 const app = require('./app');
 const db = require('./db');
+const { checkHealth, performReset } = require('./modules/system/system.service');
 
 const PORT = parseInt(process.env.PORT || '8080', 10);
 
@@ -16,6 +17,14 @@ async function start() {
   try {
     await db.migrate();
     console.log('Database migrations verified successfully.');
+
+    // Automatically seed baseline data if not already seeded
+    const health = await checkHealth();
+    if (!health.healthy) {
+      console.log('Seeding baseline data on startup...');
+      await performReset({ seed: 42 });
+      console.log('Baseline data seeded successfully.');
+    }
   } catch (err) {
     console.warn('Startup database notice:', err.message);
   }
