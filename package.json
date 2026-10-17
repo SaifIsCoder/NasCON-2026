@@ -1,0 +1,17 @@
+{
+  "name": "nascon-2026-backend",
+  "version": "1.0.0",
+  "description": "NaSCon '26 Part I: Multi-Sport League & Club Operations Platform Backend",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test --test-concurrency=1 tests/**/*.test.js"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "pg": "^8.23.1"
+  }
+}

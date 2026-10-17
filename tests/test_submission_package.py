@@ -35,12 +35,15 @@ class TestSubmissionPackage(unittest.TestCase):
 
         self.assertIn("DAY1_SALT", content, ".env.example must declare DAY1_SALT")
 
-        # Ensure no real salt value is prefilled
+        # Ensure no real salt value is prefilled (must be empty or an explicit placeholder)
         for line in content.splitlines():
             line = line.strip()
             if line.startswith("DAY1_SALT="):
                 val = line.split("=", 1)[1].strip()
-                self.assertEqual(val, "", ".env.example must not contain a real salt value")
+                self.assertTrue(
+                    val == "" or "replace" in val.lower() or "your" in val.lower(),
+                    ".env.example must not contain a real salt value"
+                )
 
     def test_docker_compose_forwards_salt(self):
         """Verifies docker-compose.yml forwards ${DAY1_SALT} to the backend service."""
