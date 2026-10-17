@@ -2,35 +2,38 @@
 
 /**
  * NaSCon '26 Express Server Entrypoint
- * Applies database migrations and binds to process.env.PORT (default: 8080) per Section 5.3.
+ * Applies database migrations, verifies baseline readiness, and starts HTTP server.
  */
 
 const app = require('./app');
-const db = require('./db');
-const { checkHealth, performReset } = require('./modules/system/system.service');
+const db = require('./config/database');
+const { HealthService } = require('./services/health.service');
+const { ResetService } = require('./services/reset.service');
+const { logger } = require('./config/logger');
+const { env } = require('./config/env');
 
-const PORT = parseInt(process.env.PORT || '8080', 10);
+const PORT = env.PORT;
 
 let server;
 
 async function start() {
   try {
     await db.migrate();
-    console.log('Database migrations verified successfully.');
+    logger.info('Database migrations verified successfully.');
 
     // Automatically seed baseline data if not already seeded
-    const health = await checkHealth();
+    const health = await HealthService.checkHealth();
     if (!health.healthy) {
-      console.log('Seeding baseline data on startup...');
-      await performReset({ seed: 42 });
-      console.log('Baseline data seeded successfully.');
+      logger.info('Seeding baseline data on startup...');
+      await ResetService.performReset({ seed: 42 });
+      logger.info('Baseline data seeded successfully.');
     }
   } catch (err) {
-    console.warn('Startup database notice:', err.message);
+    logger.warn(`Startup database notice: ${err.message}`);
   }
 
   server = app.listen(PORT, '0.0.0.0', () => {
-    console.log(`NaSCon '26 Backend API listening on port ${PORT}`);
+    logger.info(`NaSCon '26 Backend API listening on port ${PORT}`);
   });
 }
 
