@@ -9,6 +9,8 @@ const express = require('express');
 const { appendEvent, getScore } = require('./modules/events/event.service');
 const { processCheckout, getInventory } = require('./modules/store/checkout.service');
 const { checkHealth, performReset } = require('./modules/system/system.service');
+const { login, getRbacMatrix, authorizeProbe } = require('./modules/auth/auth.service');
+const { authenticate, requireRole, requireTenantIsolation } = require('./middleware/auth');
 
 const app = express();
 
@@ -109,6 +111,97 @@ app.get('/audit/v1/inventory/:variant_id', async (req, res, next) => {
   try {
     const result = await getInventory(req.params.variant_id);
     res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Authentication / Login Endpoints (Section 8.3)
+app.post(['/api/v1/auth/login', '/auth/login'], async (req, res, next) => {
+  try {
+    const result = await login(req.body || {});
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Section 5.13: Mandatory Autograder RBAC Matrix Endpoint
+app.post('/audit/v1/rbac-matrix', async (req, res, next) => {
+  try {
+    const matrix = await getRbacMatrix();
+    res.status(200).json(matrix);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Section 5.13: Authorization Probe Routes (P1 - P7)
+// P1: POST /audit/v1/rbac/tenants
+app.post('/audit/v1/rbac/tenants', authenticate, async (req, res, next) => {
+  try {
+    await authorizeProbe('P1', req.user);
+    res.status(200).json({ authorized: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// P2: POST /audit/v1/rbac/leagues/:league_id/fixtures
+app.post('/audit/v1/rbac/leagues/:league_id/fixtures', authenticate, async (req, res, next) => {
+  try {
+    await authorizeProbe('P2', req.user, req.params);
+    res.status(200).json({ authorized: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// P3: POST /audit/v1/rbac/clubs/:club_id/roster
+app.post('/audit/v1/rbac/clubs/:club_id/roster', authenticate, async (req, res, next) => {
+  try {
+    await authorizeProbe('P3', req.user, req.params);
+    res.status(200).json({ authorized: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// P4: POST /audit/v1/rbac/clubs/:club_id/products
+app.post('/audit/v1/rbac/clubs/:club_id/products', authenticate, async (req, res, next) => {
+  try {
+    await authorizeProbe('P4', req.user, req.params);
+    res.status(200).json({ authorized: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// P5: PATCH /audit/v1/rbac/players/:player_id
+app.patch('/audit/v1/rbac/players/:player_id', authenticate, async (req, res, next) => {
+  try {
+    await authorizeProbe('P5', req.user, req.params);
+    res.status(200).json({ authorized: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// P6: GET /audit/v1/rbac/clubs/:club_id
+app.get('/audit/v1/rbac/clubs/:club_id', authenticate, async (req, res, next) => {
+  try {
+    await authorizeProbe('P6', req.user, req.params);
+    res.status(200).json({ authorized: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// P7: GET /audit/v1/rbac/platform/config
+app.get('/audit/v1/rbac/platform/config', authenticate, async (req, res, next) => {
+  try {
+    await authorizeProbe('P7', req.user);
+    res.status(200).json({ authorized: true });
   } catch (err) {
     next(err);
   }

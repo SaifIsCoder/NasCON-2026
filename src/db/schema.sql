@@ -53,7 +53,6 @@ CREATE TABLE IF NOT EXISTS users (
     user_id VARCHAR(64) PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    password_plain VARCHAR(255) NOT NULL,
     role VARCHAR(64) NOT NULL,
     tenant_id VARCHAR(64) REFERENCES tenants(tenant_id) ON DELETE SET NULL,
     league_id VARCHAR(64) REFERENCES leagues(league_id) ON DELETE SET NULL,
@@ -61,6 +60,9 @@ CREATE TABLE IF NOT EXISTS users (
     player_id VARCHAR(64) REFERENCES players(player_id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Ensure plaintext passwords are never stored
+ALTER TABLE users DROP COLUMN IF EXISTS password_plain;
 
 -- Discounts (Section 5.5, 5.12)
 CREATE TABLE IF NOT EXISTS discounts (
@@ -191,12 +193,12 @@ INSERT INTO players (player_id, club_id, tenant_id, name, position) VALUES
 ('player-beta-1', 'club-beta-1', 'tenant-beta', 'Beta Player 1', 'Defender')
 ON CONFLICT (player_id) DO NOTHING;
 
-INSERT INTO users (user_id, email, password_hash, password_plain, role, tenant_id, league_id, club_id, player_id) VALUES 
-('usr-admin-001', 'admin@nascon.test', 'd6b4ee9941a37c945b63060d4b8f59d4c1bdf7fdbdfa688b77fb79f1ec5f79aa', 'Nascon@26', 'super_admin', null, null, null, null),
-('usr-org-001', 'organizer@nascon.test', 'd6b4ee9941a37c945b63060d4b8f59d4c1bdf7fdbdfa688b77fb79f1ec5f79aa', 'Nascon@26', 'league_organizer', 'tenant-alpha', 'league-alpha-1', null, null),
-('usr-mgr-001', 'manager@nascon.test', 'd6b4ee9941a37c945b63060d4b8f59d4c1bdf7fdbdfa688b77fb79f1ec5f79aa', 'Nascon@26', 'club_manager', 'tenant-alpha', null, 'club-alpha-1', null),
-('usr-player-001', 'player@nascon.test', 'd6b4ee9941a37c945b63060d4b8f59d4c1bdf7fdbdfa688b77fb79f1ec5f79aa', 'Nascon@26', 'player', 'tenant-alpha', null, null, 'player-alpha-1'),
-('usr-viewer-001', 'viewer@nascon.test', 'd6b4ee9941a37c945b63060d4b8f59d4c1bdf7fdbdfa688b77fb79f1ec5f79aa', 'Nascon@26', 'viewer', 'tenant-alpha', null, null, null)
+INSERT INTO users (user_id, email, password_hash, role, tenant_id, league_id, club_id, player_id) VALUES 
+('usr-admin-001', 'admin@nascon.test', 'a1b2c3d4e5f60718:06bcf565672be00a8ba8403516a50fa2632f3f5e256bc63f32166846ff1b34d55c2cdd71a85871663dd00d863e290f9f2f67a4b442440298d90690f708182749', 'super_admin', null, null, null, null),
+('usr-org-001', 'organizer@nascon.test', 'a1b2c3d4e5f60718:06bcf565672be00a8ba8403516a50fa2632f3f5e256bc63f32166846ff1b34d55c2cdd71a85871663dd00d863e290f9f2f67a4b442440298d90690f708182749', 'league_organizer', 'tenant-alpha', 'league-alpha-1', null, null),
+('usr-mgr-001', 'manager@nascon.test', 'a1b2c3d4e5f60718:06bcf565672be00a8ba8403516a50fa2632f3f5e256bc63f32166846ff1b34d55c2cdd71a85871663dd00d863e290f9f2f67a4b442440298d90690f708182749', 'club_manager', 'tenant-alpha', null, 'club-alpha-1', null),
+('usr-player-001', 'player@nascon.test', 'a1b2c3d4e5f60718:06bcf565672be00a8ba8403516a50fa2632f3f5e256bc63f32166846ff1b34d55c2cdd71a85871663dd00d863e290f9f2f67a4b442440298d90690f708182749', 'player', 'tenant-alpha', null, null, 'player-alpha-1'),
+('usr-viewer-001', 'viewer@nascon.test', 'a1b2c3d4e5f60718:06bcf565672be00a8ba8403516a50fa2632f3f5e256bc63f32166846ff1b34d55c2cdd71a85871663dd00d863e290f9f2f67a4b442440298d90690f708182749', 'viewer', 'tenant-alpha', null, null, null)
 ON CONFLICT (user_id) DO NOTHING;
 
 INSERT INTO audit_reset_state (id, seed) VALUES (1, 42)

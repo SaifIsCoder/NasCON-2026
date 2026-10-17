@@ -7,6 +7,7 @@
 
 const crypto = require('crypto');
 const db = require('../../db');
+const { hashPassword } = require('../auth/auth.service');
 
 const BASELINE_SPORTS = [
   {
@@ -97,8 +98,7 @@ const DEMO_USERS = [
   {
     user_id: 'usr-admin-001',
     email: 'admin@nascon.test',
-    password_plain: 'Nascon@26',
-    password_hash: crypto.createHash('sha256').update('Nascon@26').digest('hex'),
+    password_hash: hashPassword('Nascon@26'),
     role: 'super_admin',
     tenant_id: null,
     league_id: null,
@@ -108,8 +108,7 @@ const DEMO_USERS = [
   {
     user_id: 'usr-org-001',
     email: 'organizer@nascon.test',
-    password_plain: 'Nascon@26',
-    password_hash: crypto.createHash('sha256').update('Nascon@26').digest('hex'),
+    password_hash: hashPassword('Nascon@26'),
     role: 'league_organizer',
     tenant_id: 'tenant-alpha',
     league_id: 'league-alpha-1',
@@ -119,8 +118,7 @@ const DEMO_USERS = [
   {
     user_id: 'usr-mgr-001',
     email: 'manager@nascon.test',
-    password_plain: 'Nascon@26',
-    password_hash: crypto.createHash('sha256').update('Nascon@26').digest('hex'),
+    password_hash: hashPassword('Nascon@26'),
     role: 'club_manager',
     tenant_id: 'tenant-alpha',
     league_id: null,
@@ -130,8 +128,7 @@ const DEMO_USERS = [
   {
     user_id: 'usr-player-001',
     email: 'player@nascon.test',
-    password_plain: 'Nascon@26',
-    password_hash: crypto.createHash('sha256').update('Nascon@26').digest('hex'),
+    password_hash: hashPassword('Nascon@26'),
     role: 'player',
     tenant_id: 'tenant-alpha',
     league_id: null,
@@ -141,8 +138,7 @@ const DEMO_USERS = [
   {
     user_id: 'usr-viewer-001',
     email: 'viewer@nascon.test',
-    password_plain: 'Nascon@26',
-    password_hash: crypto.createHash('sha256').update('Nascon@26').digest('hex'),
+    password_hash: hashPassword('Nascon@26'),
     role: 'viewer',
     tenant_id: 'tenant-alpha',
     league_id: null,
@@ -364,13 +360,12 @@ async function performReset(body = {}) {
     // 6. Seed Demo Accounts (Section 8.3)
     for (const user of DEMO_USERS) {
       await client.query(
-        `INSERT INTO users (user_id, email, password_hash, password_plain, role, tenant_id, league_id, club_id, player_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        `INSERT INTO users (user_id, email, password_hash, role, tenant_id, league_id, club_id, player_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
         [
           user.user_id,
           user.email,
           user.password_hash,
-          user.password_plain,
           user.role,
           user.tenant_id,
           user.league_id,
